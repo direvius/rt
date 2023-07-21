@@ -15,9 +15,9 @@ impl Ray {
 }
 
 pub struct Material {
-    attenuation: Scalar,
-    refraction: Scalar,
-    fuzz: Scalar,
+    pub attenuation: Scalar,
+    pub refraction: Scalar,
+    pub fuzz: Scalar,
 }
 
 pub struct Geometry {
