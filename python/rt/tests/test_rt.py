@@ -1,5 +1,5 @@
 import pytest
-from rt import Vector3
+from .. import Vector3
 
 
 class TestVector:
