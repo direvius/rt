@@ -5,6 +5,10 @@ import functools as ft
 import math
 from attrs import frozen, field
 from typing import Protocol
+from random import random, choices
+
+
+JITTER_PASSES = 64  # 64
 
 
 @frozen
@@ -123,6 +127,36 @@ class Vector3:
         """
         return self.x * other.x + self.y * other.y + self.z * other.z
 
+    @staticmethod
+    def random_in_unit_sphere() -> Vector3:
+        while True:
+            v = 2 * Vector3(random(), random(), random()) - Vector3(1, 1, 1)
+            if abs(v) < 1:
+                return v
+            
+    @staticmethod
+    def reflect_direction(v: Vector3, n: Vector3) -> Vector3:
+        """
+        Calculates the reflection direction of a vector against a normal.
+
+        Args:
+        v (Vector3): The vector to reflect
+        n (Vector3): The normal vector to reflect against
+
+        Returns:
+        Vector3: The reflection of 'v' against 'n'
+        """
+        return v - 2 * n * v.dot(n)
+    
+    @staticmethod
+    def refract_direction(v: Vector3, n: Vector3) -> Vector3:
+        # TODO: rewrite
+        return v + 2 * n * v.dot(n) * 0.7
+    
+    @staticmethod
+    def diffuse_direction(v: Vector3, n: Vector3) -> Vector3:
+        return Vector3.reflect_direction(v, n) + Vector3.random_in_unit_sphere()
+
 
 @frozen
 class Rgb:
@@ -231,20 +265,6 @@ class HitResult:
     t: float
     material: Material
 
-    @staticmethod
-    def reflect_direction(v: Vector3, n: Vector3) -> Vector3:
-        """
-        Calculates the reflection direction of a vector against a normal.
-
-        Args:
-        v (Vector3): The vector to reflect
-        n (Vector3): The normal vector to reflect against
-
-        Returns:
-        Vector3: The reflection of 'v' against 'n'
-        """
-        return v - 2 * n * v.dot(n)
-
     def collide(self, r: Ray) -> Ray:
         """
         Returns a new ray representing a reflection after collision.
@@ -255,7 +275,15 @@ class HitResult:
         Returns:
         Ray: The reflected ray after collision
         """
-        return Ray(origin=self.p, direction=self.reflect_direction(r.direction, self.n))
+        weights = [self.material.diffuse, self.material.reflection, self.material.refraction]
+        strategies = [Vector3.diffuse_direction, Vector3.reflect_direction, Vector3.refract_direction]
+
+        # reflection
+        collided = Ray(
+            origin=self.p,
+            direction=choices(strategies, weights)[0](r.direction, self.n)
+        )
+        return collided
 
 
 class Hitable(Protocol):
@@ -297,7 +325,7 @@ class Camera:
     ex: Vector3 = Vector3(1e-2, 0, 0)
     ey: Vector3 = Vector3(0, 1e-2, 0)
     origin: Vector3 = Vector3(0, 0, 0)
-    center: Vector3 = Vector3(0, 0, -2)
+    center: Vector3 = Vector3(0, 0, -1)
 
     @property
     def upper_left(self) -> Vector3:
@@ -320,7 +348,7 @@ class Camera:
         Returns:
         Ray: The ray corresponding to pixel (i, j)
         """
-        return Ray(self.origin, self.upper_left + self.ex * i - self.ey * j)
+        return Ray(self.origin, self.upper_left + self.ex * (i + random() - 0.5) - self.ey * (j + random() - 0.5))
 
     def color(self, r: Ray) -> Vector3:
         """
@@ -347,9 +375,12 @@ class Camera:
         img = [[(0, 0, 0) for _ in range(self.width)] for _ in range(self.height)]
         for iy in range(self.height):
             for ix in range(self.width):
-                r = self.get_ray(ix, iy)
-                img[iy][ix] = tuple(Rgb.from_vector3(self.color(r)))
-        return img
+                color = Vector3(0, 0, 0)
+                for _ in range(JITTER_PASSES):
+                    r = self.get_ray(ix, iy)
+                    color += self.color(r)
+                img[iy][ix] = tuple(Rgb.from_vector3(color / JITTER_PASSES))  # type: ignore
+        return img  # type: ignore
 
     @staticmethod
     def env_color(r: Ray) -> Vector3:
@@ -483,8 +514,8 @@ class SceneBuilder:
 
 scene = (
     SceneBuilder()
-    .add_geometry(Sphere(Vector3(0, 0, -4), 1, METAL))
-    .add_geometry(Sphere(Vector3(0, -5, -4), 4, METAL))
+    .add_geometry(Sphere(Vector3(0, 0, -1), 0.5, METAL))
+    .add_geometry(Sphere(Vector3(0, -100.5, -1), 100, METAL))
     .create()
 )
 camera = Camera(scene)
