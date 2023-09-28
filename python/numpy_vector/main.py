@@ -9,7 +9,7 @@ def main():
         .add_sphere(0, -100.5, -1, 100, Materials.METAL.value)
         .create()
     )
-    camera = Camera(scene)
+    camera = Camera(scene, jitter_passes=64)
     camera.write_png()
 
 

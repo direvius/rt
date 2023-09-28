@@ -1,5 +1,5 @@
 from attrs import frozen
-from .math import Vector3
+from .vector import Vector3
 from random import choices
 
 
@@ -44,42 +44,33 @@ class Material:
     Attributes:
     diffuse (float): The diffuse coefficient of the material
     reflection (float): The reflection coefficient of the material
-    refraction (float): The refraction coefficient of the material
     """
 
     diffuse: float
     reflection: float
-    refraction: float
 
     @staticmethod
     def reflect_direction(v: Vector3, n: Vector3) -> Vector3:
         return v - 2 * n * v.dot(n)
 
     @staticmethod
-    def refract_direction(v: Vector3, n: Vector3) -> Vector3:
-        # TODO: rewrite
-        return v + 2 * n * v.dot(n) * 0.7
-
-    @staticmethod
     def diffuse_direction(v: Vector3, n: Vector3) -> Vector3:
         return Material.reflect_direction(v, n) + Vector3.random_in_unit_sphere()
 
-    def collide(self, point: Vector3, normal: Vector3, r: Ray):
+    def collide(self, point: Vector3, normal: Vector3, r: Ray) -> Ray:
         weights = [
             self.diffuse,
             self.reflection,
-            self.refraction,
         ]
         strategies = [
             Material.diffuse_direction,
             Material.reflect_direction,
-            Material.refract_direction,
         ]
 
         # reflection
-        collided = Ray(
-            origin=point,
-            direction=choices(strategies, weights)[0](r.direction, normal),
-            color=r.color / 2
-        )
+        collided = Ray(origin=point, direction=choices(strategies, weights)[0](r.direction, normal), color=r.color / 2)
         return collided
+
+# https://www.youtube.com/watch?v=HPNW0we-ft0
+# https://www.youtube.com/watch?v=oa3Yo7Ro02A
+# https://www.youtube.com/watch?v=R9iZzaXUaK4

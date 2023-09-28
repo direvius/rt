@@ -2,9 +2,9 @@ from __future__ import annotations
 import functools as ft
 import png  # type: ignore
 from attrs import frozen, field
-from typing import Iterator, Self
+from typing import Iterator
 from random import random
-from .math import Vector3
+from .vector import Vector3
 from .optics import Ray, Material
 from .bodies import Hitable, HitResult, Sphere
 
@@ -70,7 +70,7 @@ class Camera:
     ey: Vector3 = Vector3(0, 1e-2, 0)
     origin: Vector3 = Vector3(0, 0, 0)
     center: Vector3 = Vector3(0, 0, -1)
-    jitter_passes: int = 8
+    jitter_passes: int = 64
 
     @property
     def upper_left(self) -> Vector3:
@@ -95,10 +95,8 @@ class Camera:
         """
         return Ray(
             self.origin,
-            self.upper_left
-            + self.ex * (i + random() - 0.5)
-            - self.ey * (j + random() - 0.5),
-            color=Vector3(1, 1, 1)
+            self.upper_left + self.ex * (i + random() - 0.5) - self.ey * (j + random() - 0.5),
+            color=Vector3(1, 1, 1),
         )
 
     def color(self, r: Ray) -> Vector3:
@@ -196,7 +194,7 @@ class SceneBuilder:
 
     geometry: list[Hitable] = field(factory=list)
 
-    def add_geometry(self, g: Hitable) -> Self:
+    def add_geometry(self, g: Hitable) -> SceneBuilder:
         """
         Adds a Hitable object to the scene.
 
@@ -209,7 +207,7 @@ class SceneBuilder:
         self.geometry.append(g)
         return self
 
-    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Material):
+    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Material) -> SceneBuilder:
         """
         Adds a Sphere object to the scene.
 

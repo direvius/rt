@@ -1,7 +1,8 @@
 from typing import Protocol
 from attrs import frozen
 from math import sqrt
-from .math import Vector3
+from .vector import Vector3
+from . import vector
 from .optics import Material, Ray
 
 
@@ -88,7 +89,7 @@ class Sphere:
             if t > 0.001:
                 return HitResult(
                     p=r.point_at(t),
-                    n=(r.point_at(t) - self.center).normalize(),
+                    n=vector.normalize(r.point_at(t) - self.center),
                     t=t,
                     material=self.material,
                 )
