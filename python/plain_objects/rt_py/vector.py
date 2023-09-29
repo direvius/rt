@@ -43,11 +43,17 @@ class Vector3:
     def __iter__(self) -> Iterator[float]:
         return iter((self.x, self.y, self.z))
 
+    def pairwise(self, other: Vector3) -> Vector3:
+        return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
+
     def normalize(self) -> Vector3:
         return self / abs(self)
 
     def dot(self, other: Vector3) -> float:
         return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def reflect_direction(self, n: Vector3) -> Vector3:
+        return self - 2 * n * self.dot(n)
 
     @staticmethod
     def random_in_unit_sphere() -> Vector3:
