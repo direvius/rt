@@ -5,9 +5,9 @@ from attrs import frozen, field
 from typing import Iterator
 from random import random
 from .vector import Vector3
-import numpy as np
-from .optics import Ray, Material
+from .optics import Material, Ray, Collider
 from .bodies import Hitable, HitResult, Sphere
+import numpy as np
 
 
 @frozen
@@ -35,7 +35,7 @@ class Rgb:
         return iter((self.r, self.g, self.b))
 
     @staticmethod
-    def from_vector3(v: Vector3) -> Rgb:
+    def from_vector3(v: Vector3, gamma_correction: bool = False) -> Rgb:
         """
         Converts a Vector3 to an RGB color.
 
@@ -45,8 +45,10 @@ class Rgb:
         Returns:
         Rgb: The RGB color corresponding to 'v'
         """
-        v = v * 255
-        return Rgb(int(v[0]), int(v[1]), int(v[2]))
+        if gamma_correction:
+            return Rgb(*(np.sqrt(v) * 255).astype(np.int64))
+        else:
+            return Rgb(*(v * 255).astype(np.int64))
 
 
 @frozen
@@ -69,7 +71,7 @@ class Camera:
     height: int = 200
     ex: Vector3 = np.array([1e-2, 0, 0])
     ey: Vector3 = np.array([0, 1e-2, 0])
-    origin: Vector3 = np.array([0, 0, 0])
+    origin: Vector3 = np.zeros(3)
     center: Vector3 = np.array([0, 0, -1])
     jitter_passes: int = 64
 
@@ -97,23 +99,26 @@ class Camera:
         return Ray(
             self.origin,
             self.upper_left + self.ex * (i + random() - 0.5) - self.ey * (j + random() - 0.5),
-            color=np.ones(3),
         )
 
-    def color(self, r: Ray) -> Vector3:
+    def trace(self, r: Ray, depth_limit: int = 32) -> Vector3:
         """
         Calculates the color of a ray by tracing it through the scene.
 
         Args:
         r (Ray): The ray to trace
+        depth_limit (int): Maximum count of body interactions
 
         Returns:
         Vector3: The color of the ray after tracing
         """
         if hr := self.geometry.hit(r):
-            return self.color(hr.collide(r))
-        else:
-            return self.env_color(r)
+            if depth_limit > 0:
+                collide_result = hr.collide(r)
+                return self.trace(collide_result.r, depth_limit-1) * collide_result.attenuation
+            else:
+                return np.zeros(3)
+        return self.env_color(r)
 
     def render(self) -> list[list[tuple[int, int, int]]]:
         """
@@ -128,8 +133,8 @@ class Camera:
                 color = np.zeros(3)
                 for _ in range(self.jitter_passes):
                     r = self.get_ray(ix, iy)
-                    color += self.color(r)
-                img[iy][ix] = tuple(Rgb.from_vector3(color / self.jitter_passes))  # type: ignore
+                    color += self.trace(r)
+                img[iy][ix] = tuple(Rgb.from_vector3(color / self.jitter_passes, gamma_correction=False))  # type: ignore
         return img  # type: ignore
 
     @staticmethod
@@ -145,7 +150,7 @@ class Camera:
         """
         t = (r.direction[1] + 1) * 0.5
         env_color = (1 - t) * np.ones(3) + t * np.array([0.5, 0.7, 1])
-        return (env_color + r.color) / 2
+        return env_color
 
     def write_png(self):
         """
@@ -208,7 +213,7 @@ class SceneBuilder:
         self.geometry.append(g)
         return self
 
-    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Material) -> SceneBuilder:
+    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Collider | None = None) -> SceneBuilder:
         """
         Adds a Sphere object to the scene.
 
@@ -220,6 +225,8 @@ class SceneBuilder:
         Returns:
         SceneBuilder: This builder instance (for method chaining)
         """
+        if material is None:
+            material = Material.random()
         self.add_geometry(Sphere(np.array([cx, cy, cz]), r, material))
         return self
 
@@ -231,3 +238,6 @@ class SceneBuilder:
         Scene: The created Scene object
         """
         return Scene(self.geometry)
+
+    def camera(self, passes: int = 64) -> Camera:
+        return Camera(self.create(), jitter_passes=64)

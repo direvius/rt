@@ -14,3 +14,7 @@ def random_in_unit_sphere() -> Vector3:
         v = 2 * np.random.rand(3) - np.ones(3)
         if np.linalg.norm(v) < 1:
             return v
+
+
+def reflect_direction(r: Vector3, n: Vector3) -> Vector3:
+    return r - 2 * n * r.dot(n)

@@ -6,7 +6,7 @@ from typing import Iterator
 from random import random
 import math
 from .vector import Vector3
-from .optics import Ray, Collider
+from .optics import Material, Ray, Collider
 from .bodies import Hitable, HitResult, Sphere
 
 
@@ -213,7 +213,7 @@ class SceneBuilder:
         self.geometry.append(g)
         return self
 
-    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Collider) -> SceneBuilder:
+    def add_sphere(self, cx: float, cy: float, cz: float, r: float, material: Collider | None = None) -> SceneBuilder:
         """
         Adds a Sphere object to the scene.
 
@@ -225,6 +225,8 @@ class SceneBuilder:
         Returns:
         SceneBuilder: This builder instance (for method chaining)
         """
+        if material is None:
+            material = Material.random()
         self.add_geometry(Sphere(Vector3(cx, cy, cz), r, material))
         return self
 
@@ -236,3 +238,6 @@ class SceneBuilder:
         Scene: The created Scene object
         """
         return Scene(self.geometry)
+
+    def camera(self, passes: int = 64) -> Camera:
+        return Camera(self.create(), jitter_passes=64)

@@ -1,7 +1,8 @@
+from typing import Protocol
 from attrs import frozen
-from random import choices
-from .vector import Vector3
-from . import vector
+from .vector import Vector3, random_in_unit_sphere, reflect_direction
+from random import random
+import numpy as np
 
 
 @frozen
@@ -16,13 +17,12 @@ class Ray:
 
     origin: Vector3
     direction: Vector3
-    color: Vector3
 
     def __attrs_post_init__(self):
         """
         Ensures the direction is normalized after initialization.
         """
-        object.__setattr__(self, "direction", vector.normalize(self.direction))
+        object.__setattr__(self, "direction", self.direction / np.linalg.norm(self.direction))
 
     def point_at(self, p: float) -> Vector3:
         """
@@ -38,40 +38,41 @@ class Ray:
 
 
 @frozen
+class CollideResult:
+    r: Ray
+    attenuation: Vector3
+
+
+class Collider(Protocol):
+    def collide(self, point: Vector3, normal: Vector3, r: Ray) -> CollideResult:
+        ...
+
+
+@frozen
 class Material:
     """
-    A class used to represent a material with properties such as diffuse, reflection, and refraction coefficients.
+    A class used to represent a material with properties such as fuzz and attenuation coefficients.
 
     Attributes:
-    diffuse (float): The diffuse coefficient of the material
-    reflection (float): The reflection coefficient of the material
+    fuzz (float): The roughness of material
+    attenuation (Vector3): The attenuation of each color component in vector form
+
+    If you want to extend the functionality of this class, consider watching this videos:
+
+    https://www.youtube.com/watch?v=HPNW0we-ft0
+    https://www.youtube.com/watch?v=oa3Yo7Ro02A
+    https://www.youtube.com/watch?v=R9iZzaXUaK4
     """
 
-    diffuse: float
-    reflection: float
+    fuzz: float
+    attenuation: Vector3
+
+    def collide(self, point: Vector3, normal: Vector3, r: Ray) -> CollideResult:
+        collided = Ray(
+            origin=point,
+            direction=reflect_direction(r.direction, normal) + random_in_unit_sphere() * self.fuzz)
+        return CollideResult(collided, self.attenuation)
 
     @staticmethod
-    def reflect_direction(v: Vector3, n: Vector3) -> Vector3:
-        return v - 2 * n * v.dot(n)
-
-    @staticmethod
-    def diffuse_direction(v: Vector3, n: Vector3) -> Vector3:
-        return Material.reflect_direction(v, n) + vector.random_in_unit_sphere()
-
-    def collide(self, point: Vector3, normal: Vector3, r: Ray) -> Ray:
-        weights = [
-            self.diffuse,
-            self.reflection,
-        ]
-        strategies = [
-            Material.diffuse_direction,
-            Material.reflect_direction,
-        ]
-
-        # reflection
-        collided = Ray(origin=point, direction=choices(strategies, weights)[0](r.direction, normal), color=r.color / 2)
-        return collided
-
-# https://www.youtube.com/watch?v=HPNW0we-ft0
-# https://www.youtube.com/watch?v=oa3Yo7Ro02A
-# https://www.youtube.com/watch?v=R9iZzaXUaK4
+    def random():
+        return Material(random(), np.random.random(3))

@@ -2,8 +2,8 @@ from typing import Protocol
 from attrs import frozen
 from math import sqrt
 from .vector import Vector3
-from . import vector
-from .optics import Material, Ray
+from .optics import CollideResult, Collider, Ray
+import numpy as np
 
 
 @frozen
@@ -21,9 +21,9 @@ class HitResult:
     p: Vector3
     n: Vector3
     t: float
-    material: Material
+    material: Collider
 
-    def collide(self, r: Ray) -> Ray:
+    def collide(self, r: Ray) -> CollideResult:
         """
         Returns a new ray representing a reflection after collision.
 
@@ -67,7 +67,7 @@ class Sphere:
 
     center: Vector3
     radius: float
-    material: Material
+    material: Collider
 
     def hit(self, r: Ray) -> HitResult | None:
         """
@@ -87,9 +87,11 @@ class Sphere:
         if d >= 0.0:
             t = (-b - sqrt(d)) / (a * 2.0)
             if t > 0.001:
+                n = r.point_at(t) - self.center
+                n = n / np.linalg.norm(n)
                 return HitResult(
                     p=r.point_at(t),
-                    n=vector.normalize(r.point_at(t) - self.center),
+                    n=n,
                     t=t,
                     material=self.material,
                 )
