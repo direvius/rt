@@ -2,11 +2,8 @@ from __future__ import annotations
 import click
 from rt_numpy import SceneBuilder as NumpySceneBuilder
 from rt_py import SceneBuilder as PlainSceneBuilder
-import logging
 import time
-
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 ALGORITHMS = {
@@ -24,12 +21,7 @@ ALGORITHMS = {
     default="plain",
 )
 def main(algorithm: str):
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s.%(msecs)03d [%(levelname)-8s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    logger.info(f"Using {algorithm} implementation. Creating scene...")
+    logger.info("Using {} implementation. Creating scene...", algorithm)
     camera = (
         ALGORITHMS[algorithm]()
         .add_sphere(0, 0, -1.5, 0.5)  # central
@@ -45,7 +37,7 @@ def main(algorithm: str):
     start_time = time.perf_counter()
     camera.write_png()
     end_time = time.perf_counter()
-    logger.info(f"Tracing finished. It took {end_time - start_time:.3f} seconds")
+    logger.info("Tracing finished. It took {:.3f} seconds", end_time - start_time)
 
 
 if __name__ == "__main__":
