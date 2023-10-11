@@ -79,12 +79,14 @@ class Sphere:
         HitResult | None: The hit result if the ray hits, None otherwise
         """
         oc = r.origin - self.center
-        a = r.direction.dot(r.direction)
+        # a = r.direction.dot(r.direction)  # don't need this because direction is normalized
         b = oc.dot(r.direction) * 2.0
         c = oc.dot(oc) - self.radius**2
-        d = b * b - a * c * 4.0
+        # d = b * b - a * c * 4.0  # a is always 1, see above
+        d = b * b - c * 4.0
         if d >= 0.0:
-            t = (-b - sqrt(d)) / (a * 2.0)
+            # t = (-b - sqrt(d)) / (2.0 * a)  # a is always 1, see above
+            t = (-b - sqrt(d)) / 2.0
             if t > 0.001:
                 return HitResult(
                     p=r.point_at(t),
