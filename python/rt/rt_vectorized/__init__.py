@@ -4,6 +4,7 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 from typing import Annotated, Literal
 from attrs import frozen, field
+from loguru import logger
 
 width = 400
 height = 200
@@ -23,20 +24,46 @@ class Spheres:
     radia: npt.NDArray[np.float64]
 
 
-def get_rays(width, height) -> Rays:
-    upper_left = (
-        np.array([0, 0, -1]) -
-        np.array([1e-2, 0, 0]) * (width / 2) +
-        np.array([0, 1e-2, 0]) * (height / 2)
-    )
-    directions = (
-        np.r_[
-            np.mgrid[0:width, 0:-height:-1].reshape(2, -1),
-            np.zeros(width*height)[np.newaxis]
-        ].T * 1e-2 + upper_left
-    )
-    directions /= np.sqrt(np.einsum("ij, ij -> i", directions, directions))[:, np.newaxis]
-    return Rays(np.zeros((width * height, 3)), directions)
+@frozen
+class Camera:
+    scene: Spheres
+    jitter_passes: int = 64
+    width: int = 400
+    height: int = 200
+
+    def get_rays(self) -> Rays:
+        upper_left = (
+            np.array([0, 0, -1]) -
+            np.array([1e-2, 0, 0]) * (self.width / 2) +
+            np.array([0, 1e-2, 0]) * (self.height / 2)
+        )
+
+        # grid with jitter
+        directions = (
+            np.mgrid[0:self.width, 0:-self.height:-1].reshape(2, -1) +
+            np.random.random((2, self.width*self.height))
+        ) * 1e-2
+
+        # third dimension and transition
+        directions = np.r_[directions, np.zeros(self.width*self.height)[np.newaxis]].T + upper_left
+
+        # normalization
+        directions /= np.sqrt(np.einsum("ij, ij -> i", directions, directions))[:, np.newaxis]
+
+        return Rays(np.zeros((width * height, 3)), directions)
+
+    def write_png(self):
+        logger.info("pass #1")
+        rays = self.get_rays()
+        env = hit(rays, self.scene)
+        for i in range(self.jitter_passes - 1):
+            logger.info("pass #{}", i+2)
+            rays = self.get_rays()
+            env += hit(rays, self.scene)
+        env = env / self.jitter_passes
+        plt.figure()
+        plt.imshow(np.swapaxes(env.reshape(width, height, 3), 0, 1))
+        plt.savefig("test.png")
 
 
 @frozen
@@ -52,6 +79,9 @@ class SceneBuilder:
 
     def create(self) -> Spheres:
         return Spheres(np.array(self.centers), np.array(self.radia))
+
+    def camera(self) -> Camera:
+        return Camera(self.create(), jitter_passes=64)
 
 
 def env_colors(rays: Rays) -> npt.NDArray:
@@ -103,19 +133,3 @@ def hit(rays: Rays, spheres: Spheres) -> npt.NDArray:
             spheres=spheres
         ) / 1.5
     return env
-
-
-rays = get_rays(width, height)
-scene = (
-    SceneBuilder()
-    .add_sphere(0, 0, -1.5, 0.5)  # central
-    .add_sphere(1, 0, -1.5, 0.3)  # right
-    .add_sphere(0.3, 0, -1, 0.1)
-    .add_sphere(0.8, -0.3, -1.5, 0.1)
-    .add_sphere(-1, 0, -1.5, 0.3)  # left
-    .add_sphere(-2, 0, -1.5, 0.1)
-    .add_sphere(0, -100.5, -1.5, 100)  # The Earth
-    .create()
-)
-env = hit(rays, scene)
-plt.imshow(np.swapaxes(env.reshape(width, height, 3), 0, 1))

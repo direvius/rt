@@ -2,6 +2,7 @@ from __future__ import annotations
 import click
 from rt_numpy import SceneBuilder as NumpySceneBuilder
 from rt_py import SceneBuilder as PlainSceneBuilder
+from rt_vectorized import SceneBuilder as VectorSceneBuilder
 import time
 from loguru import logger
 
@@ -9,6 +10,7 @@ from loguru import logger
 ALGORITHMS = {
     "numpy": NumpySceneBuilder,
     "plain": PlainSceneBuilder,
+    "vector": VectorSceneBuilder,
 }
 
 
@@ -16,7 +18,7 @@ ALGORITHMS = {
 @click.option(
     "--algorithm",
     "-a",
-    type=click.Choice(["numpy", "plain"]),
+    type=click.Choice((*ALGORITHMS,)),
     help="Raytracing implementation",
     default="plain",
 )
