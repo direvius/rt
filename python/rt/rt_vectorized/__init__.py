@@ -84,13 +84,19 @@ class SceneBuilder:
         return Camera(self.create(), jitter_passes=64)
 
 
+def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
+    return vector_batch / np.sqrt(np.einsum("ij,ij->i", vector_batch, vector_batch))[:, np.newaxis]
+
+
 def env_colors(rays: Rays) -> npt.NDArray:
     t = (rays.directions[:, 1] + 1) * 0.5
     env_colors = (1 - t)[:, np.newaxis] * np.ones([len(rays.directions), 3]) + t[:, np.newaxis] * np.array([0.5, 0.7, 1])
     return env_colors
 
 
-def hit(rays: Rays, spheres: Spheres) -> npt.NDArray:
+def hit(rays: Rays, spheres: Spheres, max_depth: int = 32) -> npt.NDArray:
+    if max_depth <= 0:
+        return np.zeros(rays.directions.shape)
     origins = rays.origins
     dim = len(origins)
     acc = np.full(dim, np.inf)
@@ -105,31 +111,29 @@ def hit(rays: Rays, spheres: Spheres) -> npt.NDArray:
         d = b * b - c * 4.0
         hits = d > 0.0
         t = np.full(dim, np.inf)
-        t[hits] = -b[hits] - np.sqrt(d[hits]) / 2
-        t[t < 0.001] = np.inf
+        t[hits] = (-b[hits] - np.sqrt(d[hits])) / 2
+        t[t < 1e-2] = np.inf
         should_update = t < acc
         acc[should_update] = t[should_update]
         indices[should_update] = i + 1
         hitpoints[should_update] = origins[should_update] + rays.directions[should_update] * t[should_update, np.newaxis]
-        normals[should_update] = hitpoints[should_update] - center
-        normals[should_update] /= np.einsum("ij,ij->i", normals[should_update], normals[should_update])[:, np.newaxis]
+        normals[should_update] = normalize(hitpoints[should_update] - center)
     updated = indices != 0
-    updated_len = sum(updated)
-    reflected_directions = (
-        rays.directions[updated] -
-        2 * normals[updated] *
-        np.einsum(
-            "ij,ij->i",
-            rays.directions[updated],
-            normals[updated]
-        )[:, np.newaxis]
-    )
-    if updated_len > 0:
+    if any(updated) > 0:
         env[updated] = hit(
             Rays(
                 origins=hitpoints[updated],
-                directions=reflected_directions
+                directions=reflect(rays.directions[updated], normals[updated])
             ),
-            spheres=spheres
+            spheres=spheres,
+            max_depth=max_depth - 1
         ) / 1.5
     return env
+
+
+def reflect(directions: npt.NDArray, normals: npt.NDArray, ) -> npt.NDArray:
+    reflect_direction = (
+        directions - 2 * normals *
+        np.einsum("ij,ij->i", directions, normals)[:, np.newaxis]
+    )
+    return normalize(reflect_direction)
