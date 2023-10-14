@@ -88,6 +88,28 @@ def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
     return vector_batch / np.sqrt(np.einsum("ij,ij->i", vector_batch, vector_batch))[:, np.newaxis]
 
 
+def random_in_unit_sphere(dim: int) -> npt.NDArray:
+    # init
+    lengths = (np.random.random(size=dim) ** 1/3)[:, np.newaxis]
+    u = np.random.random(size=dim)
+    v = np.random.random(size=dim)
+    ex = np.array([np.ones(dim), np.zeros(dim), np.zeros(dim)]).T * lengths
+    ey = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T * lengths
+    ez = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T * lengths
+
+    theta = 2 * np.pi * u
+    phi = np.arccos(2 * v - 1)
+    sin_phi = np.sin(phi)[:, np.newaxis]
+    sin_theta = np.sin(theta)[:, np.newaxis]
+    cos_phi = np.cos(phi)[:, np.newaxis]
+    cos_theta = np.cos(theta)[:, np.newaxis]
+    return (
+        ex * sin_phi * cos_theta +
+        ey * sin_phi * sin_theta +
+        ez * cos_phi
+    )
+
+
 def env_colors(rays: Rays) -> npt.NDArray:
     t = (rays.directions[:, 1] + 1) * 0.5
     env_colors = (1 - t)[:, np.newaxis] * np.ones([len(rays.directions), 3]) + t[:, np.newaxis] * np.array([0.5, 0.7, 1])
@@ -123,7 +145,7 @@ def hit(rays: Rays, spheres: Spheres, max_depth: int = 32) -> npt.NDArray:
         env[updated] = hit(
             Rays(
                 origins=hitpoints[updated],
-                directions=reflect(rays.directions[updated], normals[updated])
+                directions=fuzzy_reflect(rays.directions[updated], normals[updated])
             ),
             spheres=spheres,
             max_depth=max_depth - 1
@@ -131,9 +153,19 @@ def hit(rays: Rays, spheres: Spheres, max_depth: int = 32) -> npt.NDArray:
     return env
 
 
-def reflect(directions: npt.NDArray, normals: npt.NDArray, ) -> npt.NDArray:
+def reflect(directions: npt.NDArray, normals: npt.NDArray) -> npt.NDArray:
     reflect_direction = (
         directions - 2 * normals *
         np.einsum("ij,ij->i", directions, normals)[:, np.newaxis]
+    )
+    return normalize(reflect_direction)
+
+
+def fuzzy_reflect(directions: npt.NDArray, normals: npt.NDArray, fuzz: float = 0.7) -> npt.NDArray:
+    reflect_direction = (
+        directions -
+        2 * normals *
+        np.einsum("ij,ij->i", directions, normals)[:, np.newaxis] +
+        random_in_unit_sphere(directions.shape[0]) * fuzz
     )
     return normalize(reflect_direction)

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from . import reflect, normalize
+from . import random_in_unit_sphere, reflect, normalize
 
 
 def test_normalize():
@@ -44,3 +44,9 @@ def test_reflection(direction, normal, expected, msg):
         atol=1e-10,
         err_msg=msg
     )
+
+
+def test_random_in_unit_sphere():
+    random = random_in_unit_sphere(1000)
+
+    assert random.shape == (1000, 3)
