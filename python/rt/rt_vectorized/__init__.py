@@ -152,7 +152,7 @@ def hit(rays: Rays, spheres: Spheres, max_depth: int = 32) -> npt.NDArray:
         hitpoints[should_update] = origins[should_update] + rays.directions[should_update] * t[should_update, np.newaxis]
         normals[should_update] = normalize(hitpoints[should_update] - center)
     updated = indices != 0
-    if any(updated) > 0:
+    if any(updated):
         env[updated] = hit(
             Rays(
                 origins=hitpoints[updated],
