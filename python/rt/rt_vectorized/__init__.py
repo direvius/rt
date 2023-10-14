@@ -90,12 +90,12 @@ def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
 
 def random_in_unit_sphere(dim: int) -> npt.NDArray:
     # init
-    lengths = (np.random.random(size=dim) ** 1/3)[:, np.newaxis]
+    lengths = (np.random.random(size=dim) ** (1/3))[:, np.newaxis]
     u = np.random.random(size=dim)
     v = np.random.random(size=dim)
-    ex = np.array([np.ones(dim), np.zeros(dim), np.zeros(dim)]).T * lengths
-    ey = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T * lengths
-    ez = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T * lengths
+    ex = np.array([np.ones(dim), np.zeros(dim), np.zeros(dim)]).T
+    ey = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T
+    ez = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T
 
     theta = 2 * np.pi * u
     phi = np.arccos(2 * v - 1)
@@ -107,7 +107,7 @@ def random_in_unit_sphere(dim: int) -> npt.NDArray:
         ex * sin_phi * cos_theta +
         ey * sin_phi * sin_theta +
         ez * cos_phi
-    )
+    ) * lengths
 
 
 def env_colors(rays: Rays) -> npt.NDArray:
