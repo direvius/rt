@@ -22,6 +22,8 @@ class Rays:
 class Spheres:
     centers: npt.NDArray
     radia: npt.NDArray[np.float64]
+    fuzzes: npt.NDArray[np.float64]
+    colors: npt.NDArray
 
 
 @frozen
@@ -70,15 +72,24 @@ class Camera:
 class SceneBuilder:
 
     centers: list[Vector3] = field(factory=list)
-    radia: list[np.float64] = field(factory=list)
+    radia: list[float] = field(factory=list)
+    fuzzes: list[float] = field(factory=list)
+    colors: list[Vector3] = field(factory=list)
 
     def add_sphere(self, cx: float, cy: float, cz: float, r: float) -> SceneBuilder:
         self.centers.append(np.array([cx, cy, cz]))
-        self.radia.append(np.float64(r))
+        self.radia.append(r)
+        self.fuzzes.append(np.random.random())
+        self.colors.append(np.random.random(3))
         return self
 
     def create(self) -> Spheres:
-        return Spheres(np.array(self.centers), np.array(self.radia))
+        return Spheres(
+            np.array(self.centers),
+            np.array(self.radia),
+            np.array(self.fuzzes),
+            np.array(self.colors)
+        )
 
     def camera(self) -> Camera:
         return Camera(self.create(), jitter_passes=64)
@@ -145,11 +156,14 @@ def hit(rays: Rays, spheres: Spheres, max_depth: int = 32) -> npt.NDArray:
         env[updated] = hit(
             Rays(
                 origins=hitpoints[updated],
-                directions=fuzzy_reflect(rays.directions[updated], normals[updated])
+                directions=fuzzy_reflect(
+                    rays.directions[updated],
+                    normals[updated],
+                    spheres.fuzzes[indices[updated] - 1, np.newaxis])
             ),
             spheres=spheres,
             max_depth=max_depth - 1
-        ) / 1.5
+        ) * spheres.colors[indices[updated] - 1]
     return env
 
 
@@ -161,7 +175,7 @@ def reflect(directions: npt.NDArray, normals: npt.NDArray) -> npt.NDArray:
     return normalize(reflect_direction)
 
 
-def fuzzy_reflect(directions: npt.NDArray, normals: npt.NDArray, fuzz: float = 0.7) -> npt.NDArray:
+def fuzzy_reflect(directions: npt.NDArray, normals: npt.NDArray, fuzz: float | npt.NDArray = 0.7) -> npt.NDArray:
     reflect_direction = (
         directions -
         2 * normals *
