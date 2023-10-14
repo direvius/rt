@@ -6,8 +6,6 @@ from typing import Annotated, Literal
 from attrs import frozen, field
 from loguru import logger
 
-width = 400
-height = 200
 
 Vector3 = Annotated[npt.NDArray[np.float64], Literal[3]]
 
@@ -52,7 +50,7 @@ class Camera:
         # normalization
         directions /= np.sqrt(np.einsum("ij, ij -> i", directions, directions))[:, np.newaxis]
 
-        return Rays(np.zeros((width * height, 3)), directions)
+        return Rays(np.zeros((self.width * self.height, 3)), directions)
 
     def write_png(self):
         logger.info("pass #1")
@@ -64,7 +62,7 @@ class Camera:
             env += hit(rays, self.scene)
         env = env / self.jitter_passes
         plt.figure()
-        plt.imshow(np.swapaxes(env.reshape(width, height, 3), 0, 1))
+        plt.imshow(np.swapaxes(env.reshape(self.width, self.height, 3), 0, 1))
         plt.savefig("test.png")
 
 
@@ -91,8 +89,8 @@ class SceneBuilder:
             np.array(self.colors)
         )
 
-    def camera(self) -> Camera:
-        return Camera(self.create(), jitter_passes=64)
+    def camera(self, width=400, height=200) -> Camera:
+        return Camera(self.create(), jitter_passes=64, width=width, height=height)
 
 
 def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
@@ -100,14 +98,12 @@ def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
 
 
 def random_in_unit_sphere(dim: int) -> npt.NDArray:
-    # init
     lengths = (np.random.random(size=dim) ** (1/3))[:, np.newaxis]
     u = np.random.random(size=dim)
     v = np.random.random(size=dim)
     ex = np.array([np.ones(dim), np.zeros(dim), np.zeros(dim)]).T
     ey = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T
     ez = np.array([np.zeros(dim), np.ones(dim), np.zeros(dim)]).T
-
     theta = 2 * np.pi * u
     phi = np.arccos(2 * v - 1)
     sin_phi = np.sin(phi)[:, np.newaxis]
