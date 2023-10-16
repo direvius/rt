@@ -3,6 +3,7 @@ import click
 from rt_numpy import SceneBuilder as NumpySceneBuilder
 from rt_py import SceneBuilder as PlainSceneBuilder
 from rt_vectorized import SceneBuilder as VectorSceneBuilder
+from rt_numba import SceneBuilder as NumbaSceneBuilder
 import time
 from loguru import logger
 
@@ -11,6 +12,7 @@ ALGORITHMS = {
     "numpy": NumpySceneBuilder,
     "plain": PlainSceneBuilder,
     "vector": VectorSceneBuilder,
+    "numba": NumbaSceneBuilder,
 }
 
 
