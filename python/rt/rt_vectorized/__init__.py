@@ -89,8 +89,8 @@ class SceneBuilder:
             np.array(self.colors)
         )
 
-    def camera(self, width=400, height=200) -> Camera:
-        return Camera(self.create(), jitter_passes=64, width=width, height=height)
+    def camera(self, width=400, height=200, jitter_passes=64) -> Camera:
+        return Camera(self.create(), jitter_passes=jitter_passes, width=width, height=height)
 
 
 def normalize(vector_batch: npt.NDArray) -> npt.NDArray:
