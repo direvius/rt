@@ -79,20 +79,10 @@ pub trait Hit {
     fn hit(&self, r: Ray) -> Option<HitResult>;
 }
 
-pub trait Scatter {
-    fn scatter(&self, r: Ray) -> Vec<Ray>;
-}
-
 pub struct Sphere {
     pub center: Vector3<Scalar>,
     pub radius: Scalar,
     pub material: Material,
-}
-
-impl Scatter for Sphere {
-    fn scatter(&self, r: Ray) -> Vec<Ray> {
-        todo!()
-    }
 }
 
 impl Hit for Sphere {

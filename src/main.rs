@@ -1,7 +1,5 @@
-use crate::geometry::Material;
-use crate::geometry::{Geometry, Sphere};
+use crate::geometry::Geometry;
 use crate::render::Camera;
-use cgmath::Vector3;
 use image::{buffer::ConvertBuffer, RgbImage};
 
 mod geometry;
