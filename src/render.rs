@@ -63,38 +63,18 @@ impl Camera {
     fn reflect(v: Vector3<Scalar>, n: Vector3<Scalar>) -> Vector3<Scalar> {
         v - 2.0f32 * n * v.dot(n)
     }
-    fn color_normal(r: Ray, g: &Geometry) -> Vector3<Scalar> {
-        if let Some(HitResult { p: _, n, t: _ }) = g.hit(r) {
-            (n + Vector3::new(1.0f32, 1.0, 1.0)) / 2.0
-        } else {
-            Self::env_color(r)
-        }
-    }
-    fn color_diffuse(r: Ray, g: &Geometry) -> Vector3<Scalar> {
-        if let Some(HitResult { p, n, t: _ }) = g.hit(r) {
-            let target = p + n + Self::random_in_unit_sphere();
-            Self::color_diffuse(
-                Ray {
-                    origin: p,
-                    direction: target - p,
-                },
-                g,
-            ) / 2.0
-        } else {
-            Self::env_color(r)
-        }
-    }
+
     fn color_metal(r: Ray, g: &Geometry) -> Vector3<Scalar> {
-        if let Some(HitResult { p, n, t: _ }) = g.hit(r) {
+        if let Some(HitResult { p, n, t: _ , m}) = g.hit(r) {
             let reflected =
-                Self::reflect(r.direction.normalize(), n) + Self::random_in_unit_sphere() * 0.1;
+                Self::reflect(r.direction.normalize(), n) + Self::random_in_unit_sphere() * m.fuzz;
             Self::color_metal(
                 Ray {
                     origin: p,
                     direction: reflected,
                 },
                 g,
-            ) / 1.5
+            ).zip(m.attenuation, |a, b| { a * b }) // 1.5
         } else {
             Self::env_color(r)
         }

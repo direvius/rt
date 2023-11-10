@@ -1,4 +1,5 @@
 use cgmath::{InnerSpace, Vector3};
+use rand::Rng;
 
 pub type Scalar = f32;
 
@@ -14,9 +15,9 @@ impl Ray {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Material {
-    pub attenuation: Scalar,
-    pub refraction: Scalar,
+    pub attenuation: Vector3<Scalar>,
     pub fuzz: Scalar,
 }
 
@@ -26,13 +27,13 @@ pub struct Geometry {
 
 impl Geometry {
     pub fn add_sphere(&mut self, x: Scalar, y: Scalar, z: Scalar, r: Scalar) -> &mut Geometry {
+        let mut rng = rand::thread_rng();
         self.bodies.push(Box::new(Sphere {
             center: Vector3::new(x, y, z),
             radius: r,
             material: Material {
-                attenuation: 0.02,
-                refraction: 0.5,
-                fuzz: 0.3,
+                attenuation: Vector3::new(rng.gen(), rng.gen(), rng.gen()),
+                fuzz: rng.gen(),
             },
         }));
         return self;
@@ -71,6 +72,7 @@ pub struct HitResult {
     pub p: Vector3<Scalar>,
     pub t: Scalar,
     pub n: Vector3<Scalar>,
+    pub m: Material,
 }
 
 pub trait Hit {
@@ -107,6 +109,7 @@ impl Hit for Sphere {
                     p: r.point_at(t),
                     n: (r.point_at(t) - self.center).normalize(),
                     t,
+                    m: self.material,
                 })
             } else {
                 None
