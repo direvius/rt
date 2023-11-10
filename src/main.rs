@@ -11,25 +11,14 @@ fn main() {
     let mut g: Geometry = Default::default();
     let c: Camera = Default::default();
 
-    g.bodies.push(Box::new(Sphere {
-        center: Vector3::new(0.0f32, 0.0, -1.0),
-        radius: 0.5,
-        material: Material {
-            attenuation: 0.02,
-            refraction: 0.5,
-            fuzz: 0.3,
-        },
-    }));
-
-    g.bodies.push(Box::new(Sphere {
-        center: Vector3::new(0.0f32, -100.5, -1.0),
-        radius: 100.0f32,
-        material: Material {
-            attenuation: 0.02,
-            refraction: 0.5,
-            fuzz: 0.3,
-        },
-    }));
+    g
+        .add_sphere(0.0, 0.0, -1.5, 0.5)
+        .add_sphere(1.0, 0.0, -1.5, 0.3)
+        .add_sphere(0.3, 0.0, -1.0, 0.1)
+        .add_sphere(0.8, -0.3, -1.5, 0.1)
+        .add_sphere(-1.0, 0.0, -1.5, 0.3)
+        .add_sphere(-2.0, 0.0, -1.5, 0.1)
+        .add_sphere(0.0, -100.5, -1.5, 100.0);
 
     let ib: RgbImage = c.render(&g).convert();
 

@@ -24,6 +24,21 @@ pub struct Geometry {
     pub bodies: Vec<Box<dyn Hit>>,
 }
 
+impl Geometry {
+    pub fn add_sphere(&mut self, x: Scalar, y: Scalar, z: Scalar, r: Scalar) -> &mut Geometry {
+        self.bodies.push(Box::new(Sphere {
+            center: Vector3::new(x, y, z),
+            radius: r,
+            material: Material {
+                attenuation: 0.02,
+                refraction: 0.5,
+                fuzz: 0.3,
+            },
+        }));
+        return self;
+    }
+}
+
 impl Default for Geometry {
     fn default() -> Self {
         Self { bodies: Vec::new() }
